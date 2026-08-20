@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  BUYER
+  SELLER
+}
+
+enum SuborderStatus {
+  PAID
+  SHIPPED
+  CANCELLED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role
+  createdAt    DateTime @default(now())
+
+  products  Product[]
+  cartItems CartItem[]
+  orders    Order[]
+  suborders Suborder[] @relation("SellerSuborders")
+}
+
+model Product {
+  id           String   @id @default(uuid())
+  sellerId     String
+  seller       User     @relation(fields: [sellerId], references: [id])
+  name         String
+  description  String
+  basePriceCents Int
+  initialStock Int
+  stock        Int
+  category     String
+  createdAt    DateTime @default(now())
+
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+}
+
+model CartItem {
+  id        String   @id @default(uuid())
+  buyerId   String
+  buyer     User     @relation(fields: [buyerId], references: [id])
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int
+  addedAt   DateTime @default(now())
+
+  @@unique([buyerId, productId])
+}
+
+model Order {
+  id              String   @id @default(uuid())
+  buyerId         String
+  buyer           User     @relation(fields: [buyerId], references: [id])
+  totalAmountCents Int
+  createdAt       DateTime @default(now())
+
+  suborders Suborder[]
+}
+
+model Suborder {
+  id              String         @id @default(uuid())
+  orderId         String
+  order           Order          @relation(fields: [orderId], references: [id])
+  sellerId        String
+  seller          User           @relation("SellerSuborders", fields: [sellerId], references: [id])
+  status          SuborderStatus @default(PAID)
+  subtotalCents   Int
+
+  orderItems OrderItem[]
+}
+
+model OrderItem {
+  id                       String   @id @default(uuid())
+  suborderId               String
+  suborder                 Suborder @relation(fields: [suborderId], references: [id])
+  productId                String
+  product                  Product  @relation(fields: [productId], references: [id])
+  quantity                 Int
+  unitPriceAtPurchaseCents Int
+}
