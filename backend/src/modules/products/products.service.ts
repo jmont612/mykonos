@@ -4,12 +4,17 @@ import { getCalculatedPriceCents } from '../pricing/pricing.service.js';
 import type { createProductSchema, updateProductSchema, listProductsQuerySchema } from './products.schemas.js';
 import type { z } from 'zod';
 import { Prisma } from '@prisma/client';
+import { deleteProductImageDir } from './imageStorage.js';
 
 type CreateInput = z.infer<typeof createProductSchema>;
 type UpdateInput = z.infer<typeof updateProductSchema>;
 type ListQuery = z.infer<typeof listProductsQuerySchema>;
 
 async function toResponse(product: { id: string; sellerId: string; name: string; description: string; basePriceCents: number; stock: number; initialStock: number; category: string }) {
+  const images = await prisma.productImage.findMany({
+    where: { productId: product.id },
+    orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }],
+  });
   return {
     id: product.id,
     sellerId: product.sellerId,
@@ -18,6 +23,7 @@ async function toResponse(product: { id: string; sellerId: string; name: string;
     priceCents: await getCalculatedPriceCents(product),
     stock: product.stock,
     category: product.category,
+    images: images.map((img) => ({ id: img.id, url: img.url, isPrimary: img.isPrimary })),
   };
 }
 
@@ -69,4 +75,5 @@ export async function deleteProduct(id: string, sellerId: string) {
     }
     throw error;
   }
+  await deleteProductImageDir(id);
 }

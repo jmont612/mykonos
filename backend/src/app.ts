@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
 import { ZodError } from 'zod';
 import { authRouter } from './modules/auth/auth.routes.js';
 import { productsRouter } from './modules/products/products.routes.js';
@@ -12,6 +13,7 @@ export function createApp() {
   const app = express();
   app.use(cors());
   app.use(express.json());
+  app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
 
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok' });
